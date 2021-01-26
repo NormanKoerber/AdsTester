@@ -1,0 +1,52 @@
+#Visual Studio Dateien ignorieren
+*.obj
+*.pdb
+*.user
+*.aps
+*.pch
+*.vspscc
+*_i.c
+*_p.c
+*.ncb
+*.suo
+*.tlb
+*.tlh
+*.bak
+*.cache
+*.ilk
+*.log
+*.opensdf
+*.sdf
+[Bb]in
+[Dd]ebug*/
+*.lib
+*.sbr
+obj/
+[Rr]elease*/
+_ReSharper*
+ 
+# Visual Studio 2015 cache/options directory
+.vs/
+ 
+#LisRTV3
+**/[Dd]ocu/*.chm
+**/Log
+ 
+#MergeTool
+*.orig
+ 
+#Sandcastle output
+[Hh]elp/
+ 
+# NuGet Packages
+*.nupkg
+# The packages folder can be ignored because of Package Restore
+**/packages/*
+# except build/, which is used as an MSBuild target.
+!**/packages/build/
+# NuGet v3's project.json files produces more ignoreable files
+*.nuget.props
+*.nuget.targets
+ 
+#AxoCover
+**/.AxoCover/runs/*
