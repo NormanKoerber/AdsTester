@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using TwinCAT;
 using TwinCAT.Ads;
 using TwinCAT.Ads.SumCommand;
@@ -15,7 +17,9 @@ namespace AdsConsoleApp
         private static void Main(string[] args)
         {
 
+            ReadMultipleVariables();
             ReadMultipleVariablesAsDynamic();
+            ReadMultipleVariables();
 
             using (var client = new AdsClient())
             {
@@ -27,6 +31,48 @@ namespace AdsConsoleApp
             }
 
             Console.ReadLine();
+        }
+
+        private static void ReadMultipleVariables()
+        {
+            using (AdsSession session = new AdsSession(new AmsAddress(NetId, Port)))
+            {
+                AdsConnection connection = (AdsConnection)session.Connect();
+                var variables = new string[]
+                {
+                    "KLEMME 4 (EL3204).RTD INPUTS CHANNEL 1",
+                    "KLEMME 4 (EL3204).RTD INPUTS CHANNEL 2",
+                    "KLEMME 3 (EL1809).CHANNEL 1",
+                    "KLEMME 3 (EL1809).CHANNEL 2",
+                    "KLEMME 3 (EL1809).CHANNEL 3",
+                    "KLEMME 3 (EL1809).CHANNEL 4",
+                };
+
+                SumCreateHandles createHandlesCommand = new SumCreateHandles(connection, variables);
+                var handles = createHandlesCommand.CreateHandles();
+
+                SumHandleRawRead readCommand = new SumHandleRawRead(connection, handles, new uint[] { 4, 4, 1, 1, 1, 1 });
+                for (int i = 0; i < 20; i++)
+                {
+                    var values = readCommand.ReadRaw();
+
+                    var bReader = new BinaryReader(new MemoryStream(values[2]));
+                    Console.WriteLine($"Input 1:{bReader.ReadBoolean()}");
+                    
+                    PrintValue(0, values);
+                    PrintValue(1, values);
+                    Console.WriteLine();
+                }
+            }
+
+            void PrintValue(int index, IList<byte[]> values)
+            {
+                var bReader = new BinaryReader(new MemoryStream(values[index]));
+                ushort status = bReader.ReadUInt16();
+                ushort value = bReader.ReadUInt16();
+
+                Console.WriteLine($"Value {index + 1}: {value}, Status {status}");
+            }
         }
 
         private static void ReadMultipleVariablesAsDynamic()
