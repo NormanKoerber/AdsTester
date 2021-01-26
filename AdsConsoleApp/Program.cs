@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using TwinCAT;
 using TwinCAT.Ads;
@@ -16,17 +16,14 @@ namespace AdsConsoleApp
 
         private static void Main(string[] args)
         {
-
             ReadMultipleVariables();
             ReadMultipleVariablesAsDynamic();
-            ReadMultipleVariables();
 
             using (var client = new AdsClient())
             {
                 client.Connect(NetId, Port);
 
                 ReadSingleVariable(client);
-
                 PrintSymbols(client);
             }
 
@@ -37,41 +34,45 @@ namespace AdsConsoleApp
         {
             using (AdsSession session = new AdsSession(new AmsAddress(NetId, Port)))
             {
+                var term4Channel1 = new AdsReadVariable() { Name = "KLEMME 4 (EL3204).RTD INPUTS CHANNEL 1", Size = 4 };
+
                 AdsConnection connection = (AdsConnection)session.Connect();
-                var variables = new string[]
+                var variables = new AdsReadVariable[]
                 {
-                    "KLEMME 4 (EL3204).RTD INPUTS CHANNEL 1",
-                    "KLEMME 4 (EL3204).RTD INPUTS CHANNEL 2",
-                    "KLEMME 3 (EL1809).CHANNEL 1",
-                    "KLEMME 3 (EL1809).CHANNEL 2",
-                    "KLEMME 3 (EL1809).CHANNEL 3",
-                    "KLEMME 3 (EL1809).CHANNEL 4",
+                    term4Channel1,
+                    new AdsReadVariable(){ Name = "KLEMME 4 (EL3204).RTD INPUTS CHANNEL 2", Size = 4 },
+                    new AdsReadVariable(){ Name = "KLEMME 3 (EL1809).CHANNEL 1", Size = 1 },
+                    new AdsReadVariable(){ Name = "KLEMME 3 (EL1809).CHANNEL 2", Size = 1 },
+                    new AdsReadVariable(){ Name = "KLEMME 3 (EL1809).CHANNEL 3", Size = 1 },
+                    new AdsReadVariable(){ Name = "KLEMME 3 (EL1809).CHANNEL 4", Size = 1 },
                 };
 
-                SumCreateHandles createHandlesCommand = new SumCreateHandles(connection, variables);
-                var handles = createHandlesCommand.CreateHandles();
+                SumVariableRead readCommand = new SumVariableRead(connection, variables);
 
-                SumHandleRawRead readCommand = new SumHandleRawRead(connection, handles, new uint[] { 4, 4, 1, 1, 1, 1 });
                 for (int i = 0; i < 20; i++)
                 {
+                    readCommand.ReadVariables();
+
+                    var stopwatch = Stopwatch.StartNew();
                     var values = readCommand.ReadRaw();
+                    stopwatch.Stop();
 
                     var bReader = new BinaryReader(new MemoryStream(values[2]));
                     Console.WriteLine($"Input 1:{bReader.ReadBoolean()}");
-                    
-                    PrintValue(0, values);
-                    PrintValue(1, values);
-                    Console.WriteLine();
+
+                    PrintValue(0, term4Channel1.RawData);
+                    PrintValue(1, values[1]);
+                    Console.WriteLine($"Read in {stopwatch.Elapsed.TotalMilliseconds}ms.");
                 }
             }
 
-            void PrintValue(int index, IList<byte[]> values)
+            void PrintValue(int index, byte[] values)
             {
-                var bReader = new BinaryReader(new MemoryStream(values[index]));
+                var bReader = new BinaryReader(new MemoryStream(values));
                 ushort status = bReader.ReadUInt16();
                 ushort value = bReader.ReadUInt16();
 
-                Console.WriteLine($"Value {index + 1}: {value}, Status {status}");
+                Console.WriteLine($"Value {index + 1}: {value}, Status {status}, Toggle {(status & 0x8000) > 0}, Overrrange {(status & 0x2) > 0}");
             }
         }
 
@@ -99,7 +100,7 @@ namespace AdsConsoleApp
                 }
             }
 
-            void PrintValue(int index, dynamic[] values) 
+            void PrintValue(int index, dynamic[] values)
                 => Console.WriteLine($"Value {index + 1}: {values[index].VALUE}, Status {values[index].STATUS}, Overrange {values[index].STATUS.OVERRANGE}");
         }
 
