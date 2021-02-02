@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using TwinCAT;
 using TwinCAT.Ads;
 using TwinCAT.Ads.SumCommand;
@@ -16,6 +17,8 @@ namespace AdsConsoleApp
 
         private static void Main(string[] args)
         {
+            ReadCoe();
+
             ReadMultipleVariables();
             ReadMultipleVariablesAsDynamic();
 
@@ -28,6 +31,16 @@ namespace AdsConsoleApp
             }
 
             Console.ReadLine();
+        }
+
+        private static void ReadCoe()
+        {
+            using (var coe = new CoeReaderWriter(new AmsAddress("5.62.84.145.3.1", 1003)))
+            {
+                string name = coe.Read<string>(index: 0x1008, subIndex: 0, stringLength: 6);
+                ushort userCalibrationGain = coe.Read<ushort>(index: 0x8000, subIndex: 0x18);
+
+            }
         }
 
         private static void ReadMultipleVariables()
